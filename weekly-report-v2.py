@@ -92,29 +92,26 @@ def find_branches_for_issue(git_repo, issue_number):
 
 
 def get_commits_for_branch(git_repo, branch_name, username, since_date):
-    """특정 브랜치에서 특정 사용자의 특정 날짜 이후 커밋 가져오기"""
+    """특정 브랜치에서 특정 사용자의 특정 날짜 이후 커밋 가져오기
+    develop 브랜치에 있는 커밋은 제외하고 해당 브랜치에만 있는 커밋만 가져옴"""
     commits = []
     try:
         # 원격 브랜치 가져오기 시도
         try:
             git_repo.git.fetch('origin', branch_name)
+            git_repo.git.fetch('origin', 'develop')
         except Exception as e:
-            print(f"브랜치 {branch_name} fetch 오류: {str(e)}")
+            print(f"브랜치 {branch_name} 또는 develop fetch 오류: {str(e)}")
             print("이미 존재하는 참조를 사용하여 계속 진행합니다.")
 
         # git log 명령 형식 - 날짜/시간 포함
         format_str = "%H|%s|%ad|%an"
 
-        # develop 브랜치와 비교하여 커밋 가져오기
-        # 1. develop 브랜치를 먼저 가져오기
-        try:
-            git_repo.git.fetch('origin', 'develop')
-        except Exception as e:
-            print(f"develop 브랜치 fetch 오류: {str(e)}")
-
-        # 2. 브랜치의 커밋 가져오기 - 이제 날짜 포맷을 상세하게 변경 (날짜 및 시간 포함)
+        # 브랜치의 고유 커밋만 가져오기 (develop에 없는 커밋만)
+        # `--not origin/develop` 옵션을 사용하여 develop 브랜치에 있는 커밋 제외
         log_output = git_repo.git.log(
             f'origin/{branch_name}',
+            '--not', 'origin/develop',
             f'--since={since_date}',
             f'--author={username}',
             f'--pretty=format:{format_str}',
